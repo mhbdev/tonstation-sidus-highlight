@@ -1,6 +1,6 @@
 # Ton Station Weekly Highlight Builder
 
-Production-ready Telegram agent that collects Ton Station channel/group messages, curates weekly highlights with DeepSeek via SidusAI, and posts/prints a Markdown digest.
+Telegram agent that collects Ton Station or any other telegram channel/group messages, curates weekly highlights with DeepSeek via SidusAI, and posts/prints a Markdown digest.
 
 ## Features
 - Collect channel posts and group messages where the bot is present; store in SQLite.
