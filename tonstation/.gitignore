@@ -1,0 +1,25 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtualenvs
+.venv/
+env/
+venv/
+
+# Environment and local config
+.env
+.env.local
+
+# Editors/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Data
+*.db
+data/*.db

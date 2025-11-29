@@ -1,0 +1,4 @@
+sidusai @ git+https://github.com/sidus-ai/sidus-ai-core.git
+pyTelegramBotAPI==4.26.0  # provides the telebot module
+requests==2.32.3
+python-dotenv==1.0.1
