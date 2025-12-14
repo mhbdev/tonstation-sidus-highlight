@@ -11,6 +11,9 @@ from tonstation.storage import MessageStore, message_from_telegram
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+if not settings.bot_token or not settings.source_chat_id:
+    raise ValueError('TG_BOT_TOKEN and SOURCE_CHAT_ID are required to run the collector service.')
+
 bot = telebot.TeleBot(settings.bot_token, parse_mode=None, threaded=False)
 store = MessageStore(settings.db_path)
 stop_event = threading.Event()

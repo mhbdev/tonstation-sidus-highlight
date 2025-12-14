@@ -38,9 +38,9 @@ def _get_env(name: str, default=None, required: bool = False, cast=None):
 
 @dataclass
 class Settings:
-    bot_token: str
-    source_chat_id: str
-    deepseek_api_key: str
+    bot_token: Optional[str]
+    source_chat_id: Optional[str]
+    deepseek_api_key: Optional[str]
     model_name: str
     target_chat_id: Optional[str]
     db_path: str
@@ -48,13 +48,16 @@ class Settings:
     top_n_messages: int
     polling_timeout: int
     polling_interval: int
+    tg_api_id: Optional[int]
+    tg_api_hash: Optional[str]
+    tg_session_path: str
 
 
 def load_settings() -> Settings:
     return Settings(
-        bot_token=_get_env('TG_BOT_TOKEN', required=True),
-        source_chat_id=_get_env('SOURCE_CHAT_ID', required=True),
-        deepseek_api_key=_get_env('DEEPSEEK_API_KEY', required=True),
+        bot_token=_get_env('TG_BOT_TOKEN'),
+        source_chat_id=_get_env('SOURCE_CHAT_ID'),
+        deepseek_api_key=_get_env('DEEPSEEK_API_KEY'),
         model_name=_get_env('DEEPSEEK_MODEL', 'deepseek-chat'),
         target_chat_id=_get_env('HIGHLIGHT_TARGET_CHAT_ID'),
         db_path=_get_env('DB_PATH', 'tonstation/data/messages.db'),
@@ -62,6 +65,9 @@ def load_settings() -> Settings:
         top_n_messages=_get_env('TOP_N_MESSAGES', 12, cast=int),
         polling_timeout=_get_env('POLLING_TIMEOUT', 30, cast=int),
         polling_interval=_get_env('POLLING_INTERVAL', 1, cast=int),
+        tg_api_id=_get_env('TG_API_ID', cast=int),
+        tg_api_hash=_get_env('TG_API_HASH'),
+        tg_session_path=_get_env('TG_SESSION_PATH', 'tonstation/data/tg_session.session'),
     )
 
 

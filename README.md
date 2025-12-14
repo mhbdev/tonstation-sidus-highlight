@@ -1,79 +1,119 @@
-# Ton Station Weekly Highlight Builder
+# Ton Station Highlight & Analytics
 
-Telegram agent that collects Ton Station or any other telegram channel/group messages, curates weekly highlights with DeepSeek via SidusAI, and posts/prints a Markdown digest.
+Telegram analytics toolkit that:
+- Collects public channel posts **without adding a bot** (user session via Telethon).
+- Manages a list of channels and tags/keywords to watch.
+- Runs aggregated analytics per channel and per tag (counts, reach, direct links).
+- Builds an LLM-powered digest of recent activity (optional; uses DeepSeek via SidusAI).
 
 ## Features
-- Collect channel posts and group messages where the bot is present; store in SQLite.
-- Summarize last N days (default 7) into a digest: quick stats, top threads, emerging topics, recommended pins/actions.
-- Send digest to a target chat/channel or print locally.
-- `/chatid` command to return the current chat ID (even before configuring `SOURCE_CHAT_ID`).
-- Fault-tolerant polling with graceful Ctrl+C handling.
+- Botless fetch (Telethon): read public channels with API ID/hash + user session.
+- Channel & tag management: CLI to add/list/remove channels and tags.
+- Date filters: analyze any interval via `--from/--to` or window-based `--days`.
+- Aggregated analytics: per-channel/per-tag hit counts, reach (views), and direct links.
+- Optional bot send: deliver analytics/digests to a Telegram chat or print locally.
+- Legacy bot collector: still available for bot-present channels/groups.
 
 ## Project Layout
-- `tonstation/config.py` – environment-driven settings.
-- `tonstation/storage.py` – SQLite persistence for Telegram messages.
-- `tonstation/highlight_agent.py` – SidusAI + DeepSeek summarization agent.
-- `tonstation/collector_service.py` – Telegram collector to ingest channel/group messages.
-- `tonstation/digest_builder.py` – Digest generation and optional delivery.
-- `tonstation/run_highlight.py` – One-shot CLI to build/send/print the digest.
-- `tonstation/requirements.txt` – dependencies (installs local SidusAI in editable mode).
-- `tonstation/.env.example` – sample environment configuration.
-- `tonstation/.gitignore` – local ignores (env, db, pycache, editor files).
+- `tonstation/config.py` — environment-driven settings.
+- `tonstation/storage.py` — SQLite persistence for channels, tags, and messages.
+- `tonstation/cli.py` — channel/tag management, botless fetch, analytics CLI.
+- `tonstation/highlight_agent.py` — SidusAI + DeepSeek summarization agent.
+- `tonstation/digest_builder.py` — digest generation and optional delivery.
+- `tonstation/collector_service.py` — legacy bot-based collector.
+- `tonstation/run_highlight.py` — one-shot helper to build/send/print the digest.
+- `tonstation/.env.example` — sample environment configuration.
 
 ## Prerequisites
 - Python 3.10+
-- Telegram bot token; bot added to your channel/group (admin for channels to receive `channel_post`).
-- DeepSeek API key and a valid model (default `deepseek-chat`).
+- Telegram API ID & API hash (for botless fetch; create at my.telegram.org).
+- Optional: Telegram bot token (`TG_BOT_TOKEN`) if sending analytics/digests.
+- Optional: DeepSeek API key if you want the LLM digest.
 - SQLite (bundled with Python).
 
 ## Setup
-1) Install dependencies (run either from repo root or from `tonstation/`):
+1) Install dependencies (repo root or `tonstation/`):
 ```bash
 # from repo root
 python -m pip install -r tonstation/requirements.txt
 # or from tonstation/
 cd tonstation && python -m pip install -r requirements.txt
 ```
-2) Copy and fill env (can be placed in repo root or inside `tonstation/`; loader checks both):
+2) Copy and fill env (loader checks repo root, tonstation/, cwd):
 ```bash
 # from repo root
 cp tonstation/.env.example .env
 # or inside tonstation/
 cd tonstation && cp .env.example .env
 ```
-Required:
-- `TG_BOT_TOKEN` – Telegram bot token.
-- `SOURCE_CHAT_ID` – channel/group id (e.g., `-1001234567890`).
-- `DEEPSEEK_API_KEY` – DeepSeek API key.
-Optional:
-- `HIGHLIGHT_TARGET_CHAT_ID` – where to send digests; if empty, digest prints.
-- `DEEPSEEK_MODEL`, `DB_PATH`, `WINDOW_DAYS`, `TOP_N_MESSAGES`, `POLLING_TIMEOUT`, `POLLING_INTERVAL`.
+Key settings:
+- `TG_API_ID`, `TG_API_HASH`, `TG_SESSION_PATH` — required for botless fetch.
+- `TG_BOT_TOKEN`, `HIGHLIGHT_TARGET_CHAT_ID` — only if sending via bot.
+- `DEEPSEEK_API_KEY` — only for LLM digest.
+- `DB_PATH`, `WINDOW_DAYS`, `TOP_N_MESSAGES` — storage/digest tuning.
 
-## Commands (run from repo root or from tonstation/)
-- Run collector (ingest messages):
+## Botless channel management & analytics (AG-1)
+Run from repo root or `tonstation/`:
+```bash
+# Add channels (public @username or link)
+python -m tonstation.cli channels add https://t.me/example_channel
+python -m tonstation.cli channels list
+
+# Manage tags
+python -m tonstation.cli tags add airdrop
+python -m tonstation.cli tags add TON
+python -m tonstation.cli tags list
+
+# Fetch posts (default WINDOW_DAYS)
+python -m tonstation.cli fetch --days 7
+# Custom interval
+python -m tonstation.cli fetch --from 2025-01-01 --to 2025-01-31
+
+# Analytics (prints by default)
+python -m tonstation.cli analyze --days 7
+# Send analytics to Telegram
+python -m tonstation.cli analyze --days 7 --send --target -1001234567890
+```
+Analytics output covers:
+- Which channels had keyword hits.
+- Counts per tag and per channel.
+- Reach (views) per tag and per channel.
+- Direct links to matching posts.
+
+## LLM Digest (optional)
+Generate weekly digest (DeepSeek required):
+```bash
+# send to HIGHLIGHT_TARGET_CHAT_ID if set
+python -m tonstation.digest_builder
+# print only
+python -m tonstation.digest_builder --no-send
+# one-shot helper
+python -m tonstation.run_highlight --target -1001234567890
+```
+
+## Legacy bot collector (optional)
 ```bash
 python -m tonstation.collector_service
 ```
-  - Use `/chatid` in the channel/group to get its ID.
-- Build and send digest (uses `HIGHLIGHT_TARGET_CHAT_ID` if set):
-```bash
-python -m tonstation.digest_builder
-```
-- Print-only:
-```bash
-python -m tonstation.digest_builder --no-send
-```
-- One-shot helper:
-```bash
-python -m tonstation.run_highlight              # send to HIGHLIGHT_TARGET_CHAT_ID
-python -m tonstation.run_highlight --print-only # just print
-python -m tonstation.run_highlight --target -1001234567890 # override target once
-```
+- Requires `TG_BOT_TOKEN` and `SOURCE_CHAT_ID` (bot must be in the channel/group).
+- Use `/chatid` in the channel/group to discover its ID.
 
-## Notes for production
-- Keep the collector running as a service (systemd/Docker); schedule digest via cron/GitHub Actions.
-- Ensure outbound network for DeepSeek API.
-- SQLite file is created automatically at `DB_PATH`; back it up if needed.
+## Data & paths
+- Database: `DB_PATH` (default `tonstation/data/messages.db`).
+- Telethon session: `TG_SESSION_PATH` (default `tonstation/data/tg_session.session`).
+- Both paths should be writable where the process runs.
+
+## Testing
+```bash
+python -m pip install pytest pytest-cov
+python -m pytest --maxfail=1 --disable-warnings --cov=tonstation --cov-report=term-missing
+```
+Tests stub external services; no network/Telegram calls are made during test runs.
+
+## Production notes
+- Schedule `fetch` and `analyze` (cron/systemd/GitHub Actions) as needed.
+- Keep Telethon session and DB paths on persistent storage; secure secrets via env or a secret manager.
+- Ensure outbound network for DeepSeek if using the digest.
 
 ## License
 MIT

@@ -12,6 +12,9 @@ from tonstation.storage import MessageRecord, MessageStore
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+if not settings.deepseek_api_key:
+    raise ValueError('DEEPSEEK_API_KEY must be set to build digests.')
+
 
 def _score(record: MessageRecord) -> int:
     views = record.views or 0
@@ -90,6 +93,8 @@ def build_and_optionally_send(send: bool = True, target_chat_id: str | None = No
 
     target = target_chat_id or settings.target_chat_id
     if send and target:
+        if not settings.bot_token:
+            raise ValueError('TG_BOT_TOKEN is required to send the digest to Telegram.')
         bot = telebot.TeleBot(settings.bot_token, parse_mode='Markdown')
         send_digest(bot, target, digest_text)
         logger.info('Digest sent to %s', target)
