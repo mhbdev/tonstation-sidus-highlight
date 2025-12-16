@@ -12,9 +12,6 @@ from tonstation.storage import MessageRecord, MessageStore
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-if not settings.deepseek_api_key:
-    raise ValueError('DEEPSEEK_API_KEY must be set to build digests.')
-
 
 def _score(record: MessageRecord) -> int:
     views = record.views or 0
@@ -79,31 +76,37 @@ def send_digest(bot: telebot.TeleBot, chat_id: str, text: str):
 
 
 def build_and_optionally_send(send: bool = True, target_chat_id: str | None = None) -> str:
+    if not settings.deepseek_api_key:
+        raise ValueError('DEEPSEEK_API_KEY must be set to build digests.')
+
     store = MessageStore(settings.db_path)
-    records = store.fetch_since_days(settings.window_days)
-    logger.info('Loaded %s messages for last %s days', len(records), settings.window_days)
+    try:
+        records = store.fetch_since_days(settings.window_days)
+        logger.info('Loaded %s messages for last %s days', len(records), settings.window_days)
 
-    prompt = build_prompt(records, settings.window_days)
-    agent = WeeklyHighlightAgent(
-        api_key=settings.deepseek_api_key,
-        system_prompt=DEFAULT_SYSTEM_PROMPT,
-        model_name=settings.model_name,
-    )
-    digest_text = agent.build_digest_sync(prompt)
+        prompt = build_prompt(records, settings.window_days)
+        agent = WeeklyHighlightAgent(
+            api_key=settings.deepseek_api_key,
+            system_prompt=DEFAULT_SYSTEM_PROMPT,
+            model_name=settings.model_name,
+        )
+        digest_text = agent.build_digest_sync(prompt)
 
-    target = target_chat_id or settings.target_chat_id
-    if send and target:
-        if not settings.bot_token:
-            raise ValueError('TG_BOT_TOKEN is required to send the digest to Telegram.')
-        bot = telebot.TeleBot(settings.bot_token, parse_mode='Markdown')
-        send_digest(bot, target, digest_text)
-        logger.info('Digest sent to %s', target)
-    elif send and not target:
-        logger.warning('HIGHLIGHT_TARGET_CHAT_ID not set; printing digest locally.')
-        print(digest_text)
-    else:
-        print(digest_text)
-    return digest_text
+        target = target_chat_id or settings.target_chat_id
+        if send and target:
+            if not settings.bot_token:
+                raise ValueError('TG_BOT_TOKEN is required to send the digest to Telegram.')
+            bot = telebot.TeleBot(settings.bot_token, parse_mode=None)
+            send_digest(bot, target, digest_text)
+            logger.info('Digest sent to %s', target)
+        elif send and not target:
+            logger.warning('HIGHLIGHT_TARGET_CHAT_ID not set; printing digest locally.')
+            print(digest_text)
+        else:
+            print(digest_text)
+        return digest_text
+    finally:
+        store.close()
 
 
 def main():

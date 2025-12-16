@@ -1,2 +1,7 @@
 .pytest_cache
 .coverage
+.env
+*.env
+*.session
+*.db
+tonstation/data/

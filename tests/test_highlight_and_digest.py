@@ -102,10 +102,11 @@ def test_digest_builder_missing_key(monkeypatch):
     import tonstation.digest_builder as db
     original_key = config.settings.deepseek_api_key
     config.settings.deepseek_api_key = None
+    db.settings.deepseek_api_key = None
     with pytest.raises(ValueError):
-        importlib.reload(db)
+        db.build_and_optionally_send(send=False)
     config.settings.deepseek_api_key = original_key
-    importlib.reload(db)
+    db.settings.deepseek_api_key = original_key
 
 
 def test_digest_builder_errors_and_entry(monkeypatch):

@@ -80,6 +80,75 @@ Analytics output covers:
 - Reach (views) per tag and per channel.
 - Direct links to matching posts.
 
+### Command examples (real output shapes)
+`python -m tonstation.cli` accepts the commands below; outputs reflect the current implementation (logging format `[YYYY-MM-DD HH:MM:SS,mmm] LEVEL - message`).
+
+Channels:
+```bash
+$ python -m tonstation.cli channels list
+No channels stored.
+
+$ python -m tonstation.cli channels add https://t.me/example_channel
+[2025-02-01 12:00:00,000] INFO - Added channel -1001234567890 (Example Channel)
+
+$ python -m tonstation.cli channels list --active-only
+Example Channel (-1001234567890) [active] link=https://t.me/example_channel
+
+$ python -m tonstation.cli channels remove https://t.me/example_channel
+[2025-02-01 12:05:00,000] INFO - Removed channel https://t.me/example_channel
+```
+
+Tags:
+```bash
+$ python -m tonstation.cli tags list
+No tags stored.
+
+$ python -m tonstation.cli tags add airdrop
+[2025-02-01 12:06:00,000] INFO - Added tag: airdrop
+$ python -m tonstation.cli tags add ton
+[2025-02-01 12:06:02,000] INFO - Added tag: ton
+$ python -m tonstation.cli tags list
+- airdrop
+- ton
+
+$ python -m tonstation.cli tags remove ton
+[2025-02-01 12:06:05,000] INFO - Removed tag: ton
+```
+
+Fetch (botless Telethon client; stores matching window in SQLite):
+```bash
+$ python -m tonstation.cli fetch --days 1 --max-per-channel 10
+[2025-02-01 12:10:00,000] INFO - Fetching messages between 2025-02-01 11:10 UTC and 2025-02-01 12:10 UTC
+[2025-02-01 12:10:00,100] INFO - Fetching Example Channel
+[2025-02-01 12:10:01,200] INFO - Stored 4 messages for -1001234567890
+```
+
+Analyze (prints by default; same data shape used when sending):
+```bash
+$ python -m tonstation.cli analyze --days 1
+Analytics window: 2025-02-01 11:10 UTC -> 2025-02-01 12:10 UTC
+Total hits: 2 | Channels with hits: 1 | Tags matched: 2
+
+Per channel:
+- Example Channel: 2 posts, reach=150
+
+Per tag:
+- ton: 2 posts, reach=150
+- airdrop: 1 posts, reach=120
+
+Matched posts:
+- Example Channel [2025-02-01] tags=ton, airdrop (views=120) -> https://t.me/example_channel/10
+  TON airdrop launching soon for early users.
+- Example Channel [2025-02-01] tags=ton (views=30) -> https://t.me/example_channel/11
+  TON dev update: new wallets released...
+```
+
+Analyze (send to Telegram; requires `TG_BOT_TOKEN` and target chat id):
+```bash
+$ python -m tonstation.cli analyze --days 1 --send --target -1009998887777
+[2025-02-01 12:12:00,000] INFO - Analytics report sent to -1009998887777
+```
+
 ## LLM Digest (optional)
 Generate weekly digest (DeepSeek required):
 ```bash
@@ -90,6 +159,26 @@ python -m tonstation.digest_builder --no-send
 # one-shot helper
 python -m tonstation.run_highlight --target -1001234567890
 ```
+Digest printing (content is whatever the model returns; structure follows the system prompt):
+```bash
+$ python -m tonstation.digest_builder --no-send
+[2025-02-01 12:20:00,000] INFO - Loaded 42 messages for last 7 days
+Weekly Highlight Digest
+
+1) Quick stats
+- Window: 2025-01-25 to 2025-02-01 UTC (7 days); Messages: 42; Unique authors: 18; Top sample size: 12
+
+2) Top threads
+- TON staking upgrade landed; validators outlining migration steps...
+
+3) Emerging topics
+- Wallet UX refresh; new TON DeFi farms with rising TVL...
+
+4) Recommended pins/actions
+- Pin the staking upgrade guide; prepare FAQ on DeFi risks.
+```
+
+`python -m tonstation.run_highlight --print-only` produces the same digest text locally; omitting `--print-only` and setting `--target` or `HIGHLIGHT_TARGET_CHAT_ID` sends it via the bot.
 
 ## Legacy bot collector (optional)
 ```bash
@@ -97,6 +186,12 @@ python -m tonstation.collector_service
 ```
 - Requires `TG_BOT_TOKEN` and `SOURCE_CHAT_ID` (bot must be in the channel/group).
 - Use `/chatid` in the channel/group to discover its ID.
+- Typical runtime output:
+```bash
+$ python -m tonstation.collector_service
+[2025-02-01 12:30:00,000] INFO - Starting collector for chat -1001234567890
+[2025-02-01 12:30:05,000] INFO - Stored channel post 245
+```
 
 ## Data & paths
 - Database: `DB_PATH` (default `tonstation/data/messages.db`).
